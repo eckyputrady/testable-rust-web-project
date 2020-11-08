@@ -41,7 +41,8 @@ fn configure_auth(redis_client: Arc<redis::Client>, pg_pool: Arc<PgPool>, cfg: &
         },
         token_repo: RedisTokenRepoImpl {
             redis_client: redis_client.clone()
-        }
+        },
+        metrics: Arc::new(auth::auth_service_impl::Metrics::default())
     };
     rest_auth_controller::configure(web::Data::new(service), cfg);
 }

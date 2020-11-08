@@ -4,9 +4,12 @@ use async_trait::async_trait;
 pub struct AuthServiceImpl<A: CredentialRepo, B: TokenRepo> {
     pub credential_repo: A,
     pub token_repo: B,
+    pub metrics: std::sync::Arc<Metrics>
 }
 
 #[async_trait]
+#[metered::metered(registry = Metrics, visibility = pub)]
+#[measure([HitCount, ResponseTime])]
 impl <A, B> AuthService for AuthServiceImpl<A, B>
     where A: CredentialRepo + Sync + Send,
           B: TokenRepo + Sync + Send {
