@@ -4,9 +4,25 @@ mod infrastructure;
 use actix_web::{HttpServer, App, web};
 use std::sync::Arc;
 use sqlx::PgPool;
+use tracing_actix_web::TracingLogger;
+use tracing_subscriber::{Registry, EnvFilter};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_bunyan_formatter::{JsonStorageLayer, BunyanFormattingLayer};
+use tracing_log::LogTracer;
 
 #[actix_web::main]
 async fn main() {
+    LogTracer::init().expect("Unable to setup log tracer!");
+
+    let app_name = concat!(env!("CARGO_PKG_NAME"), "-", env!("CARGO_PKG_VERSION")).to_string();
+    let (non_blocking_writer, _guard) = tracing_appender::non_blocking(std::io::stdout());
+    let bunyan_formatting_layer = BunyanFormattingLayer::new(app_name, non_blocking_writer);
+    let subscriber = Registry::default()
+        .with(EnvFilter::new("INFO"))
+        .with(JsonStorageLayer)
+        .with(bunyan_formatting_layer);
+    tracing::subscriber::set_global_default(subscriber).unwrap();
+
     if let Err(e) = dotenv::dotenv() {
         print!("Not applying .env : {:?}", e);
     }
@@ -17,7 +33,11 @@ async fn main() {
     let port = std::env::var("PORT").expect("PORT env var must be set");
     let address = format!("0.0.0.0:{}", port);
     println!("Binding server to {} ...", address);
-    HttpServer::new(move || App::new().configure(|cfg| configure_features(redis_client.clone(), pg_pool.clone(), cfg)))
+    HttpServer::new(move || {
+            App::new()
+                .wrap(TracingLogger)
+                .configure(|cfg| configure_features(redis_client.clone(), pg_pool.clone(), cfg))
+        })
         .bind(address)
         .expect("Unable to bind server")
         .run()

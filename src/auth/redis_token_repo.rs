@@ -1,8 +1,11 @@
 use super::ports::*;
 use async_trait::async_trait;
 use uuid::Uuid;
-use redis::AsyncCommands;
+use redis::{AsyncCommands, RedisError};
 use std::sync::Arc;
+use tracing::instrument;
+use tracing::{debug, error, info, span, warn, trace, Level};
+use redis::aio::Connection;
 
 pub struct RedisTokenRepoImpl {
     pub redis_client: Arc<redis::Client>
@@ -15,16 +18,24 @@ impl TokenRepo for RedisTokenRepoImpl {
         Uuid::new_v4().to_string()
     }
 
+    #[instrument(skip(self, token, username))]
     async fn save_token(self: &Self, token: &Token, username: &String) -> bool {
         let redis_client = &*self.redis_client;
-        if let Ok(mut conn) = redis_client.get_async_connection().await {
+        let result = async {
+            let mut conn = redis_client.get_async_connection().await?;
             let key = format!("token:{}", token);
-            conn.set(key, username)
-                .await
-                .map(|_: String| true)
-                .unwrap_or(false)
-        } else {
-            false
+            conn.set::<_, _, String>(key, username).await
+        }.await;
+
+        match result {
+            Err(e) => {
+                error!("Failed to store token. {}", e);
+                false
+            },
+            Ok(_) => {
+                debug!("Token is stored into Redis");
+                true
+            }
         }
     }
 

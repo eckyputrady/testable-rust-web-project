@@ -3,6 +3,7 @@ use sqlx::PgPool;
 use async_trait::async_trait;
 use sqlx::prelude::PgQueryAs;
 use std::sync::Arc;
+use tracing::{error, instrument};
 
 pub struct PostgresCredentialRepoImpl {
     pub pg_pool: Arc<PgPool>
@@ -17,17 +18,24 @@ impl CredentialRepo for PostgresCredentialRepoImpl {
             .execute(&*self.pg_pool)
             .await
             .map(|row| row > 0)
-            .unwrap_or(false)
+            .unwrap_or_else(|e| {
+                error!("DB error when querying: {}", e);
+                false
+            })
     }
 
+    #[instrument(skip(self, credential))]
     async fn is_credential_exists(self: &Self, credential: &Credential) -> bool {
-        let (found,): (bool,) = sqlx::query_as("select true from credentials where username = $1 and password = crypt($2, password)")
+        sqlx::query_as("select true from credentials where username = $1 and password = crypt($2, password)")
             .bind(&credential.username)
             .bind(&credential.password)
-            .fetch_one(&*self.pg_pool)
+            .fetch_optional(&*self.pg_pool)
             .await
-            .unwrap_or((false,));
-        found
+            .map(|opt: Option<(bool,)>| opt.is_some())
+            .unwrap_or_else(|e| {
+                error!("DB error when querying: {}", e);
+                false
+            })
     }
 }
 

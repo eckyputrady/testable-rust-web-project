@@ -1,5 +1,6 @@
 use super::ports::*;
 use async_trait::async_trait;
+use tracing::{instrument, info};
 
 pub struct AuthServiceImpl<A: CredentialRepo, B: TokenRepo> {
     pub credential_repo: A,
@@ -11,20 +12,31 @@ impl <A, B> AuthService for AuthServiceImpl<A, B>
     where A: CredentialRepo + Sync + Send,
           B: TokenRepo + Sync + Send {
 
+    #[instrument(skip(self, credential), fields(username = %credential.username))]
     async fn register(self: &Self, credential: &Credential) -> bool {
-        self.credential_repo.save_credential(credential).await
+        if self.credential_repo.save_credential(credential).await {
+            info!("Registration succeeded");
+            true
+        } else {
+            info!("Registration failed");
+            false
+        }
     }
 
+    #[instrument(skip(self, credential), fields(username = %credential.username))]
     async fn login(self: &Self, credential: &Credential) -> Option<Token> {
         if !self.credential_repo.is_credential_exists(credential).await {
+            info!("Failed login attempt from username '{}'", credential.username);
             return None;
         }
 
         let token = self.token_repo.generate_token().await;
         if !self.token_repo.save_token(&token, &credential.username).await {
+            info!("Failed to save token for username '{}'", credential.username);
             return None;
         }
 
+        info!("Successful login from username '{}'", credential.username);
         Some(token)
     }
 
