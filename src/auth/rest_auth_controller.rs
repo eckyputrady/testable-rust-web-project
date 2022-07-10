@@ -27,8 +27,7 @@ mod tests {
     use actix_web::{test, web, App};
     use mockall::predicate::*;
 
-    #[actix_web::main]
-    #[test]
+    #[tokio::test]
     async fn test_authenticate_wrong() {
         let mut auth_service = MockAuthService::new();
         auth_service.expect_authenticate().return_const(None);
@@ -45,8 +44,7 @@ mod tests {
         assert_eq!(actual_body, None);
     }
 
-    #[actix_web::main]
-    #[test]
+    #[tokio::test]
     async fn test_authenticate_correct() {
         let mut auth_service = MockAuthService::new();
         auth_service.expect_authenticate()

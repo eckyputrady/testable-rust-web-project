@@ -2,20 +2,21 @@
 name = "testable-rust-web-project"
 version = "0.1.0"
 authors = ["ecky"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-trait = "0.1.41"
-sqlx = { version = "0.3", default-features = false, features = [ "runtime-tokio", "postgres" ] }
-sqlx-pg-migrate = "1.0"
-include_dir = "0.6"
-redis = { version = "0.17.0", features = ["tokio-comp"] }
-uuid = { version = "0.8.1", features = ["v4"] }
-actix-web = "3"
-serde = { version = "1.0", features = ["derive"] }
+async-trait = "0.1.56"
+sqlx = { version = "0.5", features = ["runtime-tokio-rustls", "postgres"] }
+sqlx-pg-migrate = "1.2.0"
+include_dir = "0.7.2"
+redis = { version = "0.21.5", features = ["tokio-comp"] }
+uuid = { version = "1.1.2", features = ["v4"] }
+actix-web = "4.1.0"
+serde = { version = "1.0.138", features = ["derive"] }
 dotenv = "0.15"
+tokio = { version = "1.19.2", features = ["macros"] }
 
 [dev-dependencies]
 mockall = "0.8.3"

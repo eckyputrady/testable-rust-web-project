@@ -1,6 +1,6 @@
 use sqlx_pg_migrate::migrate;
 use include_dir::{include_dir, Dir};
-use sqlx::postgres::PgPool;
+use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::env;
 
 static MIGRATIONS: Dir = include_dir!("migrations");
@@ -12,9 +12,9 @@ pub async fn configure() -> PgPool {
 
 pub async fn configure_with_db_url(db_url: &str) -> PgPool {
     migrate(&db_url, &MIGRATIONS).await.expect("Unable to migrate DB");
-    PgPool::builder()
-        .max_size(5)
-        .build(&db_url)
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&db_url)
         .await
         .expect("Unable to connect to Postgresql")
 }

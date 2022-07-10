@@ -5,7 +5,7 @@ use actix_web::{HttpServer, App, web};
 use std::sync::Arc;
 use sqlx::PgPool;
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() {
     if let Err(e) = dotenv::dotenv() {
         print!("Not applying .env : {:?}", e);

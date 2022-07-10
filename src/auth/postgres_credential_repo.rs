@@ -1,7 +1,6 @@
 use super::ports::*;
 use sqlx::PgPool;
 use async_trait::async_trait;
-use sqlx::prelude::PgQueryAs;
 use std::sync::Arc;
 
 pub struct PostgresCredentialRepoImpl {
@@ -16,7 +15,7 @@ impl CredentialRepo for PostgresCredentialRepoImpl {
             .bind(&credential.password)
             .execute(&*self.pg_pool)
             .await
-            .map(|row| row > 0)
+            .map(|row| row.rows_affected() > 0)
             .unwrap_or(false)
     }
 
@@ -34,14 +33,13 @@ impl CredentialRepo for PostgresCredentialRepoImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::PgPool;
     use std::sync::Arc;
+    use sqlx::postgres::PgPoolOptions;
 
-    #[actix_web::main]
-    #[test]
+    #[tokio::test]
     async fn test_save_and_check() {
-        let pg_pool = PgPool::builder()
-            .build("postgresql://postgres:test@localhost:5431")
+        let pg_pool = PgPoolOptions::new()
+            .connect("postgresql://postgres:test@localhost:5431")
             .await
             .expect("Unable to connect to DB");
         sqlx::query("drop database if exists test_credential_repo").execute(&pg_pool).await.unwrap();
